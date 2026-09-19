@@ -1,159 +1,164 @@
 // ============================================================
-// Podium.jsx — Top 3 con Ovejas 3D de cuerpo completo
+// Podium.jsx — Podio de Honor Top 3 con Trofeos Oficiales 3D Dinámicos
+// (Oro, Plata, Bronce) y Personajes en Fullbody
 // ============================================================
 import { motion } from 'framer-motion';
-import { Trophy, Crown } from 'lucide-react';
+import { formatCurrency, getTier } from '../lib/tiers';
 
-const podiumConfig = {
-  1: {
-    label: '1ST LEADER · ORO',
-    borderColor: 'border-neon-gold/60',
-    glowShadow: 'shadow-neon-gold',
-    trophyColor: 'text-neon-gold',
-    badgeBg: 'bg-neon-gold/20 border-neon-gold/40 text-neon-gold',
-    height: 'h-[340px]',
-    imgHeight: 'h-[220px]',
-    nameGlow: 'text-glow-gold',
-    order: 'order-2', // centro
-    delay: 0.2,
-  },
-  2: {
-    label: '2nd',
-    borderColor: 'border-neon-silver/40',
-    glowShadow: 'shadow-neon-silver',
-    trophyColor: 'text-neon-silver',
-    badgeBg: 'bg-neon-silver/15 border-neon-silver/30 text-neon-silver',
-    height: 'h-[290px]',
-    imgHeight: 'h-[180px]',
-    nameGlow: '',
-    order: 'order-1', // izquierda
-    delay: 0.0,
-  },
-  3: {
-    label: '3rd',
-    borderColor: 'border-neon-bronze/40',
-    glowShadow: 'shadow-neon-bronze',
-    trophyColor: 'text-neon-bronze',
-    badgeBg: 'bg-neon-bronze/15 border-neon-bronze/30 text-neon-bronze',
-    height: 'h-[270px]',
-    imgHeight: 'h-[170px]',
-    nameGlow: '',
-    order: 'order-3', // derecha
-    delay: 0.4,
-  },
-};
+export default function Podium({ top3, onSelectUser }) {
+  if (!top3 || top3.length === 0) return null;
 
-function formatMoney(amount) {
-  return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) + ' USD';
-}
+  const first = top3[0];
+  const second = top3[1];
+  const third = top3[2];
 
-function PodiumCard({ user, position }) {
-  const config = podiumConfig[position];
-  if (!config) return null;
+  // Configuración de cada escalón
+  const podiumSteps = [
+    {
+      data: second,
+      rank: 2,
+      label: '2nd 🥈',
+      trophyUrl: '/trophies/trophy_silver.png',
+      borderColor: 'border-slate-400/60',
+      badgeBg: 'bg-slate-400/20 text-slate-200 border-slate-400/40',
+      glow: 'shadow-[0_0_25px_rgba(148,163,184,0.2)]',
+      cardHeight: 'h-[440px]',
+      order: 'order-1',
+    },
+    {
+      data: first,
+      rank: 1,
+      label: '👑 1ST LEADER · ORO 👑',
+      trophyUrl: '/trophies/trophy_gold.png',
+      borderColor: 'border-amber-400',
+      badgeBg: 'bg-amber-400/20 text-amber-300 border-amber-400/50',
+      glow: 'shadow-[0_0_35px_rgba(251,191,36,0.3)]',
+      cardHeight: 'h-[490px]',
+      order: 'order-2',
+      isFirst: true,
+    },
+    {
+      data: third,
+      rank: 3,
+      label: '3rd 🥉',
+      trophyUrl: '/trophies/trophy_bronze.png',
+      borderColor: 'border-amber-700/60',
+      badgeBg: 'bg-amber-700/20 text-amber-400 border-amber-700/40',
+      glow: 'shadow-[0_0_25px_rgba(180,83,9,0.2)]',
+      cardHeight: 'h-[420px]',
+      order: 'order-3',
+    },
+  ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: config.delay, ease: 'easeOut' }}
-      className={`${config.order} flex-1 max-w-[280px]`}
-    >
-      <div
-        className={`
-          relative glass-strong rounded-2xl ${config.borderColor} ${config.height}
-          flex flex-col items-center justify-end pb-5 px-4
-          ${position === 1 ? config.glowShadow : ''}
-          transition-all duration-300
-        `}
-      >
-        {/* ---- Badge de Posición ---- */}
-        {position === 1 ? (
-          <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full border text-xs font-bold ${config.badgeBg} flex items-center gap-1.5 whitespace-nowrap`}>
-            <Crown className="w-3.5 h-3.5" />
-            {config.label}
-            <Crown className="w-3.5 h-3.5" />
-          </div>
-        ) : (
-          <div className={`absolute -top-2 ${position === 2 ? 'left-3' : 'right-3'} px-3 py-1 rounded-full border text-xs font-bold ${config.badgeBg} flex items-center gap-1`}>
-            {config.label}
-            <Trophy className="w-3 h-3" />
-          </div>
-        )}
-
-        {/* ---- Personaje de Cuerpo Completo (Flotante) ---- */}
-        <motion.div
-          animate={{ y: [0, -6, 0] }}
-          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-          className={`${config.imgHeight} w-full flex items-end justify-center mb-2 mt-8`}
-        >
-          <img
-            src={user.character_fullbody_url}
-            alt={user.character_name || user.name}
-            className="max-h-full w-auto object-contain drop-shadow-2xl"
-            loading="lazy"
-          />
-        </motion.div>
-
-        {/* ---- Sombra Elíptica (Ilusión 3D) ---- */}
-        <div className="bg-black/60 blur-md w-3/4 h-4 rounded-full mx-auto -mt-2 mb-3" />
-
-        {/* ---- Info del Asesor ---- */}
-        <div className="text-center w-full">
-          <h3 className={`text-sm font-bold ${config.nameGlow} ${position === 1 ? 'text-neon-gold' : 'text-white/90'}`}>
-            {user.name}
-          </h3>
-          <p className="text-xs text-dtodo-purple mt-0.5">{user.discord_tag}</p>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-3 mt-3">
-            <span className="text-xs text-white/50">{user.sales_count} {position === 1 ? 'cierres' : 'ventas'}</span>
-            <span className={`text-sm font-bold ${position === 1 ? 'text-neon-green text-glow-green' : 'text-neon-green/80'}`}>
-              {formatMoney(user.total_sales)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-export default function Podium({ data }) {
-  const top3 = data.slice(0, 3);
-
-  // Placeholder si no hay datos
-  if (top3.length === 0) {
-    return (
-      <div className="glass rounded-2xl p-12 text-center">
-        <Trophy className="w-12 h-12 text-white/20 mx-auto mb-4" />
-        <p className="text-white/40 text-sm">No hay datos de ventas aún. Usa el simulador para empezar.</p>
-      </div>
-    );
-  }
-
-  return (
-    <section className="mb-8">
-      {/* ---- Header del Podio ---- */}
+    <section className="mb-10">
+      {/* Encabezado del podio */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <span className="text-xl">👑</span>
-            Podio de Honor · Top 3 Ventas
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <span>🏆</span> Podio de Honor · Top 3 Ventas
           </h2>
-          <p className="text-xs text-white/40 mt-1">
-            Asesores con personajes de cuerpo completo sosteniendo sus trofeos oficiales.
+          <p className="text-xs text-slate-400 mt-0.5">
+            Asesores con personajes de cuerpo completo sosteniendo sus trofeos oficiales
           </p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 glass rounded-xl">
-          <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-          <span className="text-xs text-white/60 font-medium">Mes Actual · Actualización en Vivo</span>
+
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#120e24] border border-[#2d2255] text-xs text-purple-300">
+          <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+          <span className="font-semibold">Actualización en Vivo</span>
         </div>
       </div>
 
-      {/* ---- Podio (3 columnas: 2nd | 1st | 3rd) ---- */}
-      <div className="flex items-end justify-center gap-5 px-4">
-        {top3.map((user, idx) => (
-          <PodiumCard key={user.id} user={user} position={idx + 1} />
-        ))}
+      {/* Grid del podio */}
+      <div className="grid grid-cols-3 gap-6 items-end">
+        {podiumSteps.map((step) => {
+          const user = step.data;
+          if (!user) return <div key={step.rank} className={step.order} />;
+
+          const tier = getTier(user.total_sales);
+
+          return (
+            <motion.div
+              key={user.id}
+              layout
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              onClick={() => onSelectUser(user)}
+              className={`relative ${step.order} ${step.cardHeight} cursor-pointer group flex flex-col justify-between p-6 rounded-2xl bg-[#141026] border ${step.borderColor} ${step.glow} backdrop-blur-xl transition-all duration-300 hover:scale-[1.02]`}
+            >
+              {/* Badge de posición superior */}
+              <div className="flex items-center justify-between z-10">
+                <span className={`px-3 py-1 rounded-full text-xs font-extrabold border uppercase tracking-wider ${step.badgeBg}`}>
+                  {step.label}
+                </span>
+
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${tier.badgeBg} ${tier.border} ${tier.text}`}>
+                  {tier.icon} {tier.name}
+                </span>
+              </div>
+
+              {/* Área del Personaje y Trofeo */}
+              <div className="relative flex-1 flex items-center justify-center my-2">
+                {/* Personaje de cuerpo completo flotante */}
+                <motion.div
+                  animate={{ y: [-4, 4, -4] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                  className="relative z-10 w-full h-full flex items-center justify-center"
+                >
+                  <img
+                    src={user.character_fullbody_url || '/characters/01_sheep_alex/fullbody.png'}
+                    alt={user.name}
+                    className="max-h-[260px] w-auto object-contain drop-shadow-[0_15px_15px_rgba(0,0,0,0.7)]"
+                  />
+
+                  {/* Trofeo 3D dinámico superpuesto en la escena */}
+                  <motion.div
+                    animate={{ y: [3, -3, 3], rotate: [-2, 2, -2] }}
+                    transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
+                    className="absolute -bottom-2 -right-1 w-20 h-20 z-20 pointer-events-none drop-shadow-[0_10px_10px_rgba(0,0,0,0.6)]"
+                  >
+                    <img
+                      src={step.trophyUrl}
+                      alt="Trofeo Oficial"
+                      className="w-full h-full object-contain"
+                    />
+                  </motion.div>
+                </motion.div>
+
+                {/* Sombra elíptica en el suelo */}
+                <motion.div
+                  animate={{ scale: [1, 0.85, 1], opacity: [0.5, 0.3, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                  className="absolute bottom-2 w-36 h-4 bg-black/60 rounded-full blur-md"
+                />
+              </div>
+
+              {/* Datos del Asesor y Volumen */}
+              <div className="text-center z-10 pt-2 border-t border-[#2d2255]/60">
+                <div className="flex items-center justify-center gap-1.5">
+                  <h3 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors">
+                    {user.name}
+                  </h3>
+                  <span className="text-sm">{user.country?.split(' ')[0]}</span>
+                </div>
+
+                <p className="text-xs text-purple-300 font-mono mt-0.5">
+                  {user.discord_tag}
+                </p>
+
+                <div className="flex items-center justify-between mt-3 px-2 py-1.5 rounded-lg bg-black/30 border border-[#2d2255]">
+                  <span className="text-xs text-slate-400">
+                    {user.sales_count} cierres
+                  </span>
+                  <span className="text-sm font-extrabold text-emerald-400 font-mono tracking-tight">
+                    {formatCurrency(user.total_sales)}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </section>
   );

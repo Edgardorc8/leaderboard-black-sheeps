@@ -1,180 +1,219 @@
 // ============================================================
-// CharacterModal.jsx — Selección de Personajes con Exclusividad
+// CharacterModal.jsx — Selección de Personaje Oficial con Exclusividad
 // ============================================================
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, CheckCircle, Sparkles } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { X, Lock, CheckCircle, Sparkles, MessageSquare } from 'lucide-react';
 
 export default function CharacterModal({
   isOpen,
   onClose,
   characters,
   currentUser,
-  leaderboard,
-  onCharacterAssigned,
+  targetUser,
+  onAssignCharacter,
 }) {
+  const [battleName, setBattleName] = useState('');
+  const [battleCry, setBattleCry] = useState('');
+  const [selectedCharId, setSelectedCharId] = useState(null);
+
   if (!isOpen) return null;
 
-  const handleSelect = async (character) => {
-    if (isSupabaseConfigured && supabase) {
-      // ---- Modo Supabase: llamar RPC ----
-      const { error } = await supabase.rpc('assign_character', {
-        p_user_id: currentUser.id,
-        p_character_id: character.id,
-      });
-      if (error) {
-        alert('Error al asignar personaje: ' + error.message);
-        return;
-      }
+  const activeUser = targetUser || currentUser;
+
+  const handleSelect = (character) => {
+    if (character.is_assigned && character.assigned_to_user_id !== activeUser?.id) {
+      return;
     }
-    // Callback para actualizar estado local (funciona en modo mock también)
-    onCharacterAssigned(currentUser.id, character.id);
+    setSelectedCharId(character.id);
+  };
+
+  const handleConfirmAssignment = () => {
+    if (!selectedCharId) return;
+    onAssignCharacter(activeUser?.id, selectedCharId, {
+      custom_character_name: battleName.trim() || undefined,
+      battle_cry: battleCry.trim() || undefined,
+    });
     onClose();
-  };
-
-  const getCharacterStatus = (character) => {
-    // ¿Es el personaje actual del usuario?
-    if (currentUser.character_id === character.id) return 'current';
-    // ¿Está ocupado por otro?
-    if (character.is_assigned && character.assigned_to_user_id !== currentUser.id) return 'occupied';
-    // Disponible
-    return 'available';
-  };
-
-  const getOccupiedByName = (character) => {
-    const owner = leaderboard.find((u) => u.id === character.assigned_to_user_id);
-    return owner?.name || 'Otro asesor';
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={onClose}
+          initial={{ scale: 0.95, y: 20 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.95, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-5xl bg-[#120e24] border border-[#2d2255] rounded-2xl shadow-[0_0_60px_rgba(168,85,247,0.3)] overflow-hidden max-h-[92vh] flex flex-col"
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-            className="glass-strong rounded-2xl w-full max-w-3xl mx-4 overflow-hidden"
-          >
-            {/* ---- Header ---- */}
-            <div className="flex items-start justify-between p-6 pb-4 border-b border-white/5">
-              <div>
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-dtodo-purple" />
+          {/* Header */}
+          <div className="p-6 border-b border-[#2d2255] bg-gradient-to-r from-purple-900/30 via-transparent to-pink-900/20 flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <h2 className="text-xl font-bold text-white">
                   Selecciona tu Personaje Oficial
                 </h2>
-                <p className="text-sm text-white/40 mt-1">
-                  Asignando avatar para: <span className="text-white font-medium">{currentUser.name}</span>
-                </p>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-              >
-                <X className="w-5 h-5 text-white/40" />
-              </button>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Asignando avatar para:{' '}
+                <span className="text-white font-bold">{activeUser?.name}</span>{' '}
+                <span className="text-purple-300 font-mono">({activeUser?.discord_tag})</span>
+              </p>
             </div>
 
-            {/* ---- Grid de Personajes ---- */}
-            <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto">
-              {characters.map((character) => {
-                const status = getCharacterStatus(character);
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Grid de 10 Personajes */}
+          <div className="p-6 flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {characters.map((char) => {
+                const isCurrent = char.id === activeUser?.character_id;
+                const isOccupiedByOther =
+                  char.is_assigned && char.assigned_to_user_id !== activeUser?.id;
+                const isSelected = selectedCharId === char.id;
 
                 return (
                   <motion.div
-                    key={character.id}
-                    whileHover={status === 'available' ? { scale: 1.03 } : {}}
-                    className={`
-                      relative rounded-xl p-3 border transition-all duration-200
-                      ${status === 'current'
-                        ? 'border-dtodo-purple bg-dtodo-purple/10 shadow-neon-purple ring-1 ring-dtodo-purple/50'
-                        : status === 'occupied'
-                        ? 'border-white/5 bg-white/[0.02] opacity-50 pointer-events-none'
-                        : 'border-white/10 bg-white/[0.03] hover:border-dtodo-purple/30 hover:bg-dtodo-purple/5 cursor-pointer'
-                      }
-                    `}
+                    key={char.id}
+                    whileHover={!isOccupiedByOther ? { scale: 1.02, y: -2 } : {}}
+                    onClick={() => !isOccupiedByOther && handleSelect(char)}
+                    className={`relative p-3.5 rounded-xl border flex flex-col justify-between transition-all duration-200 cursor-pointer ${
+                      isCurrent || isSelected
+                        ? 'bg-gradient-to-b from-purple-900/40 to-purple-950/20 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]'
+                        : isOccupiedByOther
+                        ? 'bg-black/40 border-[#2d2255]/40 opacity-50 cursor-not-allowed'
+                        : 'bg-[#141026] border-[#2d2255] hover:border-purple-500/60'
+                    }`}
                   >
-                    {/* Badge de Estado */}
-                    {status === 'current' && (
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-dtodo-purple/20 border border-dtodo-purple/40 text-dtodo-purple text-[10px] font-bold flex items-center gap-1 whitespace-nowrap">
-                        <CheckCircle className="w-3 h-3" />
-                        Actual
-                      </div>
-                    )}
-                    {status === 'occupied' && (
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 text-white/50 text-[10px] font-bold flex items-center gap-1 whitespace-nowrap">
-                        <Lock className="w-3 h-3" />
-                        Ocupado
-                      </div>
-                    )}
+                    {/* Badge de estado */}
+                    <div className="flex items-center justify-end mb-2">
+                      {isCurrent ? (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white shadow-sm">
+                          <CheckCircle className="w-3 h-3" /> Actual
+                        </span>
+                      ) : isSelected ? (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-sm">
+                          <CheckCircle className="w-3 h-3" /> Elegido
+                        </span>
+                      ) : isOccupiedByOther ? (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-950/40 text-red-300 border border-red-500/20">
+                          <Lock className="w-3 h-3" /> Ocupado
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/40 text-emerald-300 border border-emerald-500/20">
+                          Disponible
+                        </span>
+                      )}
+                    </div>
 
-                    {/* Imagen del Personaje */}
-                    <div className="aspect-[3/4] rounded-lg overflow-hidden bg-black/20 mb-3 mt-2 flex items-center justify-center">
+                    {/* Imagen del Busto (card_url) */}
+                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center p-2 mb-2">
                       <img
-                        src={character.fullbody_url}
-                        alt={character.name}
-                        className="max-h-full w-auto object-contain"
-                        loading="lazy"
+                        src={char.card_url || char.avatar_url}
+                        alt={char.name}
+                        className="w-full h-full object-contain drop-shadow-md"
                       />
                     </div>
 
-                    {/* Nombre */}
-                    <p className="text-xs font-bold text-center text-white/80 leading-tight">
-                      {character.name}
-                    </p>
-
-                    {/* Info Ocupado */}
-                    {status === 'occupied' && (
-                      <p className="text-[10px] text-white/30 text-center mt-1">
-                        {getOccupiedByName(character)}
+                    {/* Nombre y datos */}
+                    <div className="text-center">
+                      <h4 className="text-xs font-bold text-white truncate">
+                        {char.name}
+                      </h4>
+                      <p className="text-[10px] text-purple-300 truncate">
+                        {char.archetype || 'Oveja Guerrera'}
                       </p>
-                    )}
-
-                    {/* Info Owner Actual */}
-                    {status === 'current' && (
-                      <p className="text-[10px] text-dtodo-purple text-center mt-1">
-                        {currentUser.name}
-                      </p>
-                    )}
-
-                    {/* Botón Seleccionar */}
-                    {status === 'available' && (
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleSelect(character)}
-                        className="w-full mt-2 py-1.5 text-[11px] font-semibold rounded-lg
-                                   bg-dtodo-purple/20 border border-dtodo-purple/30 text-dtodo-purple
-                                   hover:bg-dtodo-purple/30 transition-all duration-200"
-                      >
-                        Seleccionar
-                      </motion.button>
-                    )}
+                    </div>
                   </motion.div>
                 );
               })}
             </div>
 
-            {/* ---- Footer: Regla de Exclusividad ---- */}
-            <div className="px-6 py-4 border-t border-white/5 bg-white/[0.02]">
-              <div className="flex items-center gap-2 text-xs text-white/40">
-                <Lock className="w-3.5 h-3.5 text-neon-gold flex-shrink-0" />
-                <span>
-                  <span className="font-semibold text-white/50">Regla de exclusividad activa:</span>{' '}
-                  Cada personaje solo puede pertenecer a un asesor del equipo.
-                </span>
-              </div>
+            {/* Inputs de personalización si seleccionó uno */}
+            {selectedCharId && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 p-4 rounded-xl bg-black/40 border border-[#2d2255] space-y-3"
+              >
+                <div className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Bautiza tu Personaje y Grito de Cierre (Opcional)
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                      Nombre de Batalla de tu Oveja
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: El Titán Rangel"
+                      value={battleName}
+                      onChange={(e) => setBattleName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#141026] border border-[#2d2255] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                      Grito de Cierre (Frase para Discord)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: ¡Trato cerrado, la manada no perdona!"
+                      value={battleCry}
+                      onChange={(e) => setBattleCry(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#141026] border border-[#2d2255] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 px-6 border-t border-[#2d2255] bg-black/30 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span>
+                Regla de exclusividad activa: Cada personaje solo puede pertenecer a un asesor del equipo.
+              </span>
             </div>
-          </motion.div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={handleConfirmAssignment}
+                disabled={!selectedCharId}
+                className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#e94560] to-[#a855f7] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(233,69,96,0.35)] transition-all"
+              >
+                Confirmar y Asignar Personaje
+              </button>
+            </div>
+          </div>
         </motion.div>
-      )}
+      </motion.div>
     </AnimatePresence>
   );
 }

@@ -1,74 +1,117 @@
 // ============================================================
-// Sidebar.jsx — Navegación lateral fija
+// Sidebar.jsx — Barra Lateral de Navegación Oficial
 // ============================================================
-import { Trophy, Gem, Zap, Sliders } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Trophy, Sparkles, Zap, Shield, HelpCircle } from 'lucide-react';
 
-const menuItems = [
-  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-  { id: 'characters', label: 'Elegir Personaje', icon: Gem },
-  { id: 'simulator', label: 'Simular Discord', icon: Zap },
-];
+export default function Sidebar({
+  activeView,
+  onNavigate,
+  onOpenCharacterModal,
+  onOpenAdminUsers,
+  isAdmin,
+}) {
+  const menuItems = [
+    {
+      id: 'leaderboard',
+      label: 'Leaderboard',
+      icon: Trophy,
+      action: () => onNavigate('leaderboard'),
+    },
+    {
+      id: 'characters',
+      label: 'Elegir Personaje',
+      icon: Sparkles,
+      action: onOpenCharacterModal,
+    },
+    {
+      id: 'simulator',
+      label: 'Simular Discord',
+      icon: Zap,
+      action: () => onNavigate('simulator'),
+    },
+  ];
 
-export default function Sidebar({ activeView, onViewChange }) {
+  // Si es administrador, añadir acceso a Gestión de Usuarios
+  if (isAdmin) {
+    menuItems.push({
+      id: 'admin_users',
+      label: 'Gestión de Usuarios',
+      icon: Shield,
+      action: onOpenAdminUsers,
+      isAdminBadge: true,
+    });
+  }
+
   return (
-    <aside className="glass-sidebar fixed left-0 top-0 bottom-0 w-[240px] flex flex-col z-50">
-      {/* ---- Logo ---- */}
-      <div className="px-5 pt-6 pb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-dtodo-purple to-dtodo-pink flex items-center justify-center shadow-neon-purple">
-            <Sliders className="w-5 h-5 text-white" />
+    <aside className="w-64 h-screen sticky top-0 flex flex-col justify-between p-5 bg-[#090713] border-r border-[#2d2255]/60 z-40 select-none">
+      <div>
+        {/* Logo DTodoSales ENTERPRISE HUB idéntico a capturas */}
+        <div className="flex items-center gap-3 px-2 py-3 mb-8">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#e94560] to-[#a855f7] p-0.5 shadow-[0_0_15px_rgba(233,69,96,0.4)] flex items-center justify-center">
+            <div className="w-full h-full bg-[#120e24] rounded-[10px] flex items-center justify-center text-lg">
+              💼
+            </div>
           </div>
           <div>
-            <h1 className="text-base font-bold bg-gradient-to-r from-dtodo-purple to-dtodo-pink bg-clip-text text-transparent leading-tight">
+            <h1 className="text-sm font-black text-white tracking-wide leading-tight">
               DTodoSales
             </h1>
-            <p className="text-[10px] font-semibold tracking-[0.2em] text-white/40 uppercase">
+            <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">
               Enterprise Hub
-            </p>
+            </span>
           </div>
         </div>
+
+        {/* Menú de Navegación */}
+        <nav className="space-y-1.5">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={item.action}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-purple-900/40 to-purple-950/20 text-white border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.25)]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon
+                    className={`w-4 h-4 ${
+                      isActive ? 'text-purple-400' : 'text-slate-400'
+                    }`}
+                  />
+                  <span>{item.label}</span>
+                </div>
+
+                {item.isAdminBadge && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                    ADMIN
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* ---- Menu Items ---- */}
-      <nav className="flex-1 px-3 space-y-1">
-        {menuItems.map((item) => {
-          const isActive = activeView === item.id;
-          const Icon = item.icon;
-          return (
-            <motion.button
-              key={item.id}
-              onClick={() => onViewChange(item.id)}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-              className={`
-                w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
-                transition-all duration-200 cursor-pointer
-                ${isActive
-                  ? 'bg-dtodo-purple/20 text-dtodo-purple border border-dtodo-purple/30 shadow-neon-purple'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                }
-              `}
-            >
-              <Icon className="w-[18px] h-[18px]" />
-              <span>{item.label}</span>
-            </motion.button>
-          );
-        })}
-      </nav>
-
-      {/* ---- Discord Sync Status ---- */}
-      <div className="px-5 py-5 border-t border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div className="w-2.5 h-2.5 rounded-full bg-neon-green" />
-            <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-neon-green animate-ping opacity-75" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-white/70">Discord Sync</p>
-            <p className="text-[10px] text-white/40">Bot conectado en tiempo real escuchando cierres de ventas.</p>
-          </div>
+      {/* Footer con status Discord Sync idéntico a capturas */}
+      <div className="p-4 rounded-xl bg-[#120e24] border border-[#2d2255]">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+            Discord Sync
+          </span>
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+          </span>
         </div>
+        <p className="text-[10px] text-slate-400 leading-relaxed">
+          Bot conectado en tiempo real escuchando cierres de ventas.
+        </p>
       </div>
     </aside>
   );

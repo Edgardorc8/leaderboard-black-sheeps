@@ -1,248 +1,382 @@
 // ============================================================
-// App.jsx — Layout Principal + State Management + Realtime
+// App.jsx — DTodoSales Enterprise Hub (Leaderboard Black Sheeps)
 // ============================================================
-import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
-import { MOCK_LEADERBOARD, MOCK_CHARACTERS, MOCK_CURRENT_USER } from './lib/mockData';
+import { useState, useMemo } from 'react';
+import { MOCK_CHARACTERS, MOCK_USERS, MOCK_CURRENT_USER } from './lib/mockData';
+import { formatCurrency } from './lib/tiers';
 
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import TimeFilter from './components/TimeFilter';
+import TierFilter from './components/TierFilter';
 import Podium from './components/Podium';
 import LeaderboardTable from './components/LeaderboardTable';
 import CharacterModal from './components/CharacterModal';
+import AdminUsersModal from './components/AdminUsersModal';
+import UserStatsModal from './components/UserStatsModal';
+import LoginRegisterModal from './components/LoginRegisterModal';
 import DiscordSimulator from './components/DiscordSimulator';
 
 export default function App() {
-  // ---- Estado ----
+  // ---- Estado Principal ----
   const [activeView, setActiveView] = useState('leaderboard');
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [characters, setCharacters] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [timePeriod, setTimePeriod] = useState('monthly');
+  const [tierFilter, setTierFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [users, setUsers] = useState(MOCK_USERS);
+  const [characters, setCharacters] = useState(MOCK_CHARACTERS);
+  const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER);
+
+  // ---- Modales ----
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
-  const [modalTargetUser, setModalTargetUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [characterModalTarget, setCharacterModalTarget] = useState(null);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [statsSelectedUser, setStatsSelectedUser] = useState(null);
 
-  // ---- Cargar datos ----
-  const fetchData = useCallback(async () => {
-    if (isSupabaseConfigured && supabase) {
-      // ---- Modo Supabase ----
-      const [leaderRes, charsRes] = await Promise.all([
-        supabase.from('leaderboard_view').select('*'),
-        supabase.from('characters').select('*'),
-      ]);
-      if (leaderRes.data) {
-        setLeaderboard(leaderRes.data);
-        // El usuario logueado es el primero (demo)
-        setCurrentUser(leaderRes.data[0] || null);
+  // ---- Combinar usuarios con datos de sus personajes ----
+  const usersWithCharacters = useMemo(() => {
+    return users.map((u) => {
+      const char = characters.find((c) => c.id === u.character_id);
+      return {
+        ...u,
+        character_name: char?.name,
+        character_avatar_url: char?.avatar_url,
+        character_card_url: char?.card_url,
+        character_fullbody_url: char?.fullbody_url,
+      };
+    });
+  }, [users, characters]);
+
+  // ---- Ordenar usuarios según periodo seleccionado ----
+  const sortedUsers = useMemo(() => {
+    const list = [...usersWithCharacters];
+    list.sort((a, b) => {
+      const salesA =
+        timePeriod === 'daily'
+          ? a.daily_sales || 0
+          : timePeriod === 'weekly'
+          ? a.weekly_sales || 0
+          : a.total_sales || 0;
+
+      const salesB =
+        timePeriod === 'daily'
+          ? b.daily_sales || 0
+          : timePeriod === 'weekly'
+          ? b.weekly_sales || 0
+          : b.total_sales || 0;
+
+      return salesB - salesA;
+    });
+
+    return list.map((u, i) => ({ ...u, rank: i + 1 }));
+  }, [usersWithCharacters, timePeriod]);
+
+  // ---- Top 3 para el Podio ----
+  const top3 = useMemo(() => sortedUsers.slice(0, 3), [sortedUsers]);
+
+  // ---- Filtrar usuarios para la Tabla (Tier + Búsqueda) ----
+  const filteredUsers = useMemo(() => {
+    return sortedUsers.filter((u) => {
+      // Filtro de búsqueda
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = u.name.toLowerCase().includes(query);
+        const matchesTag = u.discord_tag.toLowerCase().includes(query);
+        if (!matchesName && !matchesTag) return false;
       }
-      if (charsRes.data) setCharacters(charsRes.data);
-    } else {
-      // ---- Modo Mock (sin Supabase) ----
-      setLeaderboard([...MOCK_LEADERBOARD]);
-      setCharacters([...MOCK_CHARACTERS]);
-      setCurrentUser({ ...MOCK_CURRENT_USER });
-    }
-    setIsLoading(false);
-  }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+      // Filtro de Tier
+      if (tierFilter !== 'ALL') {
+        const sales =
+          timePeriod === 'daily'
+            ? u.daily_sales || 0
+            : timePeriod === 'weekly'
+            ? u.weekly_sales || 0
+            : u.total_sales || 0;
 
-  // ---- Suscripción Realtime (Supabase) ----
-  useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
+        if (tierFilter === 'S' && sales < 100000) return false;
+        if (tierFilter === 'A' && (sales < 70000 || sales >= 100000)) return false;
+        if (tierFilter === 'B' && (sales < 40000 || sales >= 70000)) return false;
+        if (tierFilter === 'C' && sales >= 40000) return false;
+      }
 
-    const channel = supabase
-      .channel('custom-all-channel')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, () => {
-        fetchData();
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, () => {
-        fetchData();
-      })
-      .subscribe();
+      return true;
+    });
+  }, [sortedUsers, searchQuery, tierFilter, timePeriod]);
 
-    return () => {
-      supabase.removeChannel(channel);
+  // ---- Métricas Grupales del Equipo ----
+  const teamMetrics = useMemo(() => {
+    const totalVolume = sortedUsers.reduce((acc, u) => {
+      const s =
+        timePeriod === 'daily'
+          ? u.daily_sales || 0
+          : timePeriod === 'weekly'
+          ? u.weekly_sales || 0
+          : u.total_sales || 0;
+      return acc + s;
+    }, 0);
+
+    const totalClosings = sortedUsers.reduce((acc, u) => acc + (u.sales_count || 0), 0);
+    const target = 500000;
+    const progress = Math.min(100, Math.round((totalVolume / target) * 100));
+
+    return {
+      totalVolume,
+      totalClosings,
+      target,
+      progress,
     };
-  }, [fetchData]);
+  }, [sortedUsers, timePeriod]);
 
-  // ---- Handlers para modo Mock ----
-  const handleSaleSimulated = (userId, amount) => {
-    setLeaderboard((prev) => {
-      const updated = prev.map((u) =>
-        u.id === userId
-          ? { ...u, total_sales: u.total_sales + amount, sales_count: u.sales_count + 1 }
-          : u
-      );
-      // Re-sort y re-rank
-      updated.sort((a, b) => b.total_sales - a.total_sales);
-      return updated.map((u, i) => ({ ...u, rank: i + 1 }));
-    });
-  };
+  // ---- Handlers de Lógica ----
+  const handleSimulateSale = (userId, amount) => {
+    const timeStr = 'Hoy, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const handleCharacterAssigned = (userId, characterId) => {
-    setCharacters((prev) => {
-      return prev.map((c) => {
-        // Liberar personaje anterior del usuario
-        if (c.assigned_to_user_id === userId && c.id !== characterId) {
-          return { ...c, is_assigned: false, assigned_to_user_id: null };
-        }
-        // Asignar nuevo
-        if (c.id === characterId) {
-          return { ...c, is_assigned: true, assigned_to_user_id: userId };
-        }
-        return c;
-      });
-    });
-    setLeaderboard((prev) =>
+    setUsers((prev) =>
       prev.map((u) => {
         if (u.id === userId) {
-          const char = characters.find((c) => c.id === characterId);
           return {
             ...u,
-            character_id: characterId,
-            character_name: char?.name,
-            character_fullbody_url: char?.fullbody_url,
-            character_avatar_url: char?.avatar_url,
+            total_sales: (u.total_sales || 0) + amount,
+            daily_sales: (u.daily_sales || 0) + amount,
+            weekly_sales: (u.weekly_sales || 0) + amount,
+            monthly_sales: (u.monthly_sales || 0) + amount,
+            sales_count: (u.sales_count || 0) + 1,
+            recent_sales: [{ amount, time: timeStr }, ...(u.recent_sales || [])],
           };
         }
         return u;
       })
     );
-    // Actualizar currentUser si es el mismo
+  };
+
+  const handleAssignCharacter = (userId, characterId, customData = {}) => {
+    // 1. Actualizar asignaciones en characters (regla de exclusividad)
+    setCharacters((prev) =>
+      prev.map((c) => {
+        if (c.assigned_to_user_id === userId && c.id !== characterId) {
+          return { ...c, is_assigned: false, assigned_to_user_id: null };
+        }
+        if (c.id === characterId) {
+          return { ...c, is_assigned: true, assigned_to_user_id: userId };
+        }
+        return c;
+      })
+    );
+
+    // 2. Actualizar el usuario
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            character_id: characterId,
+            ...(customData.custom_character_name && {
+              custom_character_name: customData.custom_character_name,
+            }),
+            ...(customData.battle_cry && {
+              battle_cry: customData.battle_cry,
+            }),
+          };
+        }
+        return u;
+      })
+    );
+
+    // Si es el usuario activo, actualizar estado
     if (currentUser?.id === userId) {
-      const char = characters.find((c) => c.id === characterId);
       setCurrentUser((prev) => ({
         ...prev,
         character_id: characterId,
-        character_name: char?.name,
-        character_fullbody_url: char?.fullbody_url,
-        character_avatar_url: char?.avatar_url,
+        ...(customData.custom_character_name && {
+          custom_character_name: customData.custom_character_name,
+        }),
       }));
     }
   };
 
-  const openCharacterModal = (user) => {
-    setModalTargetUser(user || currentUser);
+  const handleAddUserDirect = (userData) => {
+    const newId = 'user-' + Date.now();
+    const newUser = {
+      id: newId,
+      name: userData.name,
+      email: userData.email,
+      discord_tag: userData.discord_tag,
+      discord_id: '1000' + Math.floor(Math.random() * 900000000000),
+      country: userData.country,
+      role: userData.role,
+      is_verified: true, // Bypass de verificación
+      character_id: userData.character_id || null,
+      total_sales: userData.initial_sales || 0,
+      daily_sales: 0,
+      weekly_sales: 0,
+      monthly_sales: userData.initial_sales || 0,
+      sales_count: userData.initial_sales > 0 ? 1 : 0,
+      recent_sales: [],
+    };
+
+    setUsers((prev) => [...prev, newUser]);
+
+    if (userData.character_id) {
+      handleAssignCharacter(newId, userData.character_id);
+    }
+  };
+
+  const handleToggleAdmin = (userId) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const nextRole = u.role === 'admin' ? 'sales_agent' : 'admin';
+          return { ...u, role: nextRole };
+        }
+        return u;
+      })
+    );
+  };
+
+  const handleLoginSuccess = (newUser) => {
+    setUsers((prev) => [...prev, newUser]);
+    setCurrentUser(newUser);
+    // Si no tiene personaje, abrir automáticamente el modal de onboarding
+    setCharacterModalTarget(newUser);
     setIsCharacterModalOpen(true);
   };
 
-  // ---- Filtro de búsqueda ----
-  const filteredLeaderboard = searchQuery
-    ? leaderboard.filter(
-        (u) =>
-          u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (u.discord_tag && u.discord_tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : leaderboard;
+  const handleOpenStats = (user) => {
+    setStatsSelectedUser(user);
+    setIsStatsModalOpen(true);
+  };
 
-  // ---- Loading ----
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-dtodo-purple/30 border-t-dtodo-purple rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white/40 text-sm">Cargando DTodoSales Enterprise Hub...</p>
-        </div>
-      </div>
-    );
-  }
+  const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'admin';
 
   return (
-    <div className="min-h-screen flex">
-      {/* ---- Sidebar ---- */}
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+    <div className="flex min-h-screen bg-[#090713] text-white selection:bg-purple-600 selection:text-white font-sans">
+      {/* Sidebar fijo a la izquierda */}
+      <Sidebar
+        activeView={activeView}
+        onNavigate={(view) => setActiveView(view)}
+        onOpenCharacterModal={() => {
+          setCharacterModalTarget(currentUser);
+          setIsCharacterModalOpen(true);
+        }}
+        onOpenAdminUsers={() => setIsAdminModalOpen(true)}
+        isAdmin={isAdmin}
+      />
 
-      {/* ---- Main Content ---- */}
-      <main className="flex-1 ml-[240px] min-h-screen">
-        {/* Header */}
+      {/* Contenido Principal */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header superior */}
         <Header
           currentUser={currentUser}
+          users={usersWithCharacters}
+          onSwitchUser={(user) => setCurrentUser(user)}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onOpenStats={handleOpenStats}
         />
 
-        {/* Content Area */}
-        <div className="px-8 pb-8">
-          {/* ---- Vista: Leaderboard ---- */}
-          {activeView === 'leaderboard' && (
-            <>
-              <Podium data={filteredLeaderboard} />
-              <LeaderboardTable
-                data={filteredLeaderboard}
-                onOpenCharacterModal={openCharacterModal}
-              />
-            </>
-          )}
-
-          {/* ---- Vista: Elegir Personaje ---- */}
-          {activeView === 'characters' && (
-            <section>
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <span className="text-xl">🎭</span>
-                Galería de Personajes
-              </h2>
-              <p className="text-sm text-white/40 mb-6">
-                Selecciona tu avatar haciendo clic en cualquier personaje disponible.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {characters.map((char) => {
-                  const isCurrent = currentUser?.character_id === char.id;
-                  const isOccupied = char.is_assigned && char.assigned_to_user_id !== currentUser?.id;
-                  const owner = leaderboard.find((u) => u.id === char.assigned_to_user_id);
-
-                  return (
-                    <div
-                      key={char.id}
-                      onClick={() => !isOccupied && openCharacterModal(currentUser)}
-                      className={`
-                        glass rounded-xl p-4 text-center cursor-pointer transition-all duration-200
-                        ${isCurrent ? 'border-dtodo-purple shadow-neon-purple' : ''}
-                        ${isOccupied ? 'opacity-50 pointer-events-none' : 'hover:border-dtodo-purple/30'}
-                      `}
-                    >
-                      <div className="aspect-[3/5] rounded-lg overflow-hidden bg-black/20 mb-3 flex items-center justify-center">
-                        <img src={char.fullbody_url} alt={char.name} className="max-h-full object-contain" />
-                      </div>
-                      <p className="text-xs font-bold text-white/80">{char.name}</p>
-                      {isCurrent && <p className="text-[10px] text-dtodo-purple mt-1">Tu personaje</p>}
-                      {isOccupied && owner && <p className="text-[10px] text-white/30 mt-1">{owner.name}</p>}
-                    </div>
-                  );
-                })}
+        <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-8">
+          {/* Barra Hero: Métricas Grupales del Equipo + Selector Temporal */}
+          <section className="p-6 rounded-2xl bg-gradient-to-r from-[#141026] via-[#120e24] to-[#18132f] border border-[#2d2255] shadow-[0_0_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 w-full md:w-auto">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-600/30 border border-purple-400/40 text-purple-300 uppercase tracking-wider">
+                  Métricas Globales del Equipo
+                </span>
+                <span className="text-xs text-slate-400">
+                  {teamMetrics.totalClosings} cierres acumulados
+                </span>
               </div>
-            </section>
-          )}
 
-          {/* ---- Vista: Simulador Discord ---- */}
-          {activeView === 'simulator' && (
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-black text-emerald-400 font-mono tracking-tight">
+                  {formatCurrency(teamMetrics.totalVolume)}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">
+                  / Meta: {formatCurrency(teamMetrics.target)} ({teamMetrics.progress}%)
+                </span>
+              </div>
+
+              {/* Barra de progreso con resplandor neón */}
+              <div className="w-full md:w-96 h-2 bg-black/60 rounded-full overflow-hidden border border-[#2d2255]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#22c55e] via-[#a855f7] to-[#e94560] shadow-[0_0_12px_rgba(168,85,247,0.5)] transition-all duration-500 rounded-full"
+                  style={{ width: `${teamMetrics.progress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Selector Temporal: Diario, Semanal, Mensual */}
+            <TimeFilter activePeriod={timePeriod} onPeriodChange={setTimePeriod} />
+          </section>
+
+          {/* Vistas Condicionales */}
+          {activeView === 'leaderboard' ? (
+            <>
+              {/* Podio Top 3 */}
+              <Podium top3={top3} onSelectUser={handleOpenStats} />
+
+              {/* Barra de Filtros Tier y Tabla */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <TierFilter activeTier={tierFilter} onTierChange={setTierFilter} />
+                </div>
+
+                <LeaderboardTable
+                  users={filteredUsers}
+                  onOpenCharacterModal={(u) => {
+                    setCharacterModalTarget(u);
+                    setIsCharacterModalOpen(true);
+                  }}
+                  onSelectUser={handleOpenStats}
+                />
+              </div>
+            </>
+          ) : (
+            /* Vista del Simulador de Discord */
             <DiscordSimulator
-              leaderboard={leaderboard}
-              onSaleSimulated={handleSaleSimulated}
+              users={usersWithCharacters}
+              onSimulateSale={handleSimulateSale}
             />
           )}
-        </div>
+        </main>
+      </div>
 
-        {/* ---- Indicador modo Mock ---- */}
-        {!isSupabaseConfigured && (
-          <div className="fixed bottom-4 right-4 px-4 py-2 glass rounded-xl text-xs text-neon-gold/70 flex items-center gap-2 z-50">
-            <span className="w-2 h-2 rounded-full bg-neon-gold animate-pulse" />
-            Modo Demo — Conecta Supabase para datos reales
-          </div>
-        )}
-      </main>
-
-      {/* ---- Character Modal ---- */}
+      {/* Modales Globales */}
       <CharacterModal
         isOpen={isCharacterModalOpen}
         onClose={() => setIsCharacterModalOpen(false)}
         characters={characters}
-        currentUser={modalTargetUser || currentUser}
-        leaderboard={leaderboard}
-        onCharacterAssigned={handleCharacterAssigned}
+        currentUser={currentUser}
+        targetUser={characterModalTarget}
+        onAssignCharacter={handleAssignCharacter}
+      />
+
+      <AdminUsersModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        users={users}
+        characters={characters}
+        onAddUser={handleAddUserDirect}
+        onToggleAdmin={handleToggleAdmin}
+        currentUser={currentUser}
+      />
+
+      <UserStatsModal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
+        user={statsSelectedUser}
+        character={characters.find((c) => c.id === statsSelectedUser?.character_id)}
+      />
+
+      <LoginRegisterModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );

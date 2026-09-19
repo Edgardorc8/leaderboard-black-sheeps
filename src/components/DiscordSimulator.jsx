@@ -1,101 +1,66 @@
 // ============================================================
-// DiscordSimulator.jsx — Simulador de ventas en vivo
+// DiscordSimulator.jsx — Simulador en Vivo de Ventas de Discord
+// (Idéntico a la captura media_1789828829025.jpg)
 // ============================================================
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { formatCurrency } from '../lib/tiers';
 
-function formatMoney(amount) {
-  return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) + ' USD';
-}
-
-export default function DiscordSimulator({ leaderboard, onSaleSimulated }) {
-  const handleSimulateSale = async (user, amount) => {
-    if (isSupabaseConfigured && supabase) {
-      // ---- Modo Supabase ----
-      // 1. Insertar venta
-      const { error: saleError } = await supabase
-        .from('sales')
-        .insert({ user_id: user.id, amount });
-      if (saleError) {
-        alert('Error insertando venta: ' + saleError.message);
-        return;
-      }
-      // 2. Actualizar totales del usuario
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          total_sales: user.total_sales + amount,
-          sales_count: user.sales_count + 1,
-        })
-        .eq('id', user.id);
-      if (updateError) {
-        alert('Error actualizando usuario: ' + updateError.message);
-        return;
-      }
-    }
-    // Callback para actualizar estado local
-    onSaleSimulated(user.id, amount);
-  };
-
-  // Mostrar los primeros 6 asesores
-  const simulatorUsers = leaderboard.slice(0, 6);
-
+export default function DiscordSimulator({ users, onSimulateSale }) {
   return (
-    <section className="mt-8">
-      {/* ---- Header ---- */}
-      <div className="mb-5">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Zap className="w-5 h-5 text-neon-gold" />
-          Simulador en Vivo de Ventas de Discord
-        </h2>
-        <p className="text-xs text-white/40 mt-1">
-          Presiona los botones para inyectar ventas reales y mira cómo rotan los puestos y cambian los trofeos al instante.
-        </p>
+    <section className="bg-[#120e24] border border-[#2d2255] rounded-2xl p-6 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+      {/* Header idéntico a la foto */}
+      <div className="flex items-start gap-3 mb-6">
+        <div className="w-8 h-8 rounded-lg bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mt-0.5">
+          <Zap className="w-4 h-4 fill-current" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-white">
+            Simulador en Vivo de Ventas de Discord
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Presiona los botones para inyectar ventas reales y mira cómo rotan los puestos y cambian los trofeos al instante.
+          </p>
+        </div>
       </div>
 
-      {/* ---- Grid de Asesores ---- */}
+      {/* Grid de 2 columnas idéntico a captura */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {simulatorUsers.map((user, idx) => (
+        {users.map((user) => (
           <motion.div
             key={user.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05 }}
-            className="glass rounded-xl p-5"
+            layout
+            className="p-4 rounded-xl bg-[#141026] border border-[#2d2255] hover:border-purple-500/40 transition-all flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-bold text-white/90">{user.name}</p>
-                <p className="text-xs text-white/40 mt-0.5">{formatMoney(user.total_sales)}</p>
+            <div className="mb-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-white">
+                  {user.name}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {user.sales_count} cierres
+                </span>
               </div>
-              <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-dtodo-purple/30 bg-white/10">
-                <img
-                  src={user.character_avatar_url || user.user_avatar_url}
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="text-xs font-mono font-semibold text-emerald-400 mt-0.5">
+                {formatCurrency(user.total_sales)}
               </div>
             </div>
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => handleSimulateSale(user, 5000)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-neon-green/20 border border-neon-green/30
-                           text-neon-green hover:bg-neon-green/30 transition-all duration-200"
+
+            {/* Botones +$5K y +$25K idénticos */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => onSimulateSale(user.id, 5000)}
+                className="py-2 px-3 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/40 hover:bg-emerald-900/60 hover:border-emerald-400 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-1 active:scale-95"
               >
                 +$5K
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => handleSimulateSale(user, 25000)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-dtodo-purple/20 border border-dtodo-purple/30
-                           text-dtodo-purple hover:bg-dtodo-purple/30 transition-all duration-200"
+              </button>
+
+              <button
+                onClick={() => onSimulateSale(user.id, 25000)}
+                className="py-2 px-3 rounded-lg text-xs font-bold text-purple-200 bg-purple-950/50 border border-purple-500/40 hover:bg-purple-900/60 hover:border-purple-400 hover:shadow-[0_0_12px_rgba(168,85,247,0.35)] transition-all flex items-center justify-center gap-1 active:scale-95"
               >
                 +$25K
-              </motion.button>
+              </button>
             </div>
           </motion.div>
         ))}

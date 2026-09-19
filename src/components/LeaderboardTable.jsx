@@ -1,114 +1,143 @@
 // ============================================================
-// LeaderboardTable.jsx — Puestos 4 en adelante (cabezas 3D)
+// LeaderboardTable.jsx — Tabla de Clasificación General del Equipo
 // ============================================================
 import { motion } from 'framer-motion';
-import { Gem } from 'lucide-react';
+import { formatCurrency, getTier } from '../lib/tiers';
+import { Eye, Sparkles } from 'lucide-react';
 
-function formatMoney(amount) {
-  return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) + ' USD';
-}
-
-export default function LeaderboardTable({ data, onOpenCharacterModal }) {
-  const tableData = data.slice(3); // Puestos 4+
-
-  if (tableData.length === 0) return null;
-
+export default function LeaderboardTable({
+  users,
+  onOpenCharacterModal,
+  onSelectUser,
+}) {
   return (
-    <section className="mt-2">
-      {/* ---- Header ---- */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-bold flex items-center gap-2">
-          <span className="text-lg">📊</span>
-          Clasificación General del Equipo
-        </h2>
-        <span className="text-xs text-white/40">
-          Mostrando {tableData.length} asesores
+    <section className="bg-[#120e24] border border-[#2d2255] rounded-2xl p-6 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+      {/* Header de la tabla */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <span className="text-purple-400">👥</span>
+          <h3 className="text-base font-bold text-white">
+            Clasificación General del Equipo
+          </h3>
+        </div>
+
+        <span className="text-xs text-slate-400 font-semibold px-2.5 py-1 rounded-full bg-black/40 border border-[#2d2255]">
+          Mostrando {users.length} asesores
         </span>
       </div>
 
-      {/* ---- Tabla ---- */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <table className="w-full">
+      {/* Tabla con scroll horizontal en móviles */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-white/5">
-              <th className="px-6 py-4 text-left text-[11px] font-semibold text-white/40 uppercase tracking-wider">Rank</th>
-              <th className="px-6 py-4 text-left text-[11px] font-semibold text-white/40 uppercase tracking-wider">Asesor Comercial &amp; Avatar</th>
-              <th className="px-6 py-4 text-left text-[11px] font-semibold text-white/40 uppercase tracking-wider">Discord Tag</th>
-              <th className="px-6 py-4 text-center text-[11px] font-semibold text-white/40 uppercase tracking-wider">Cierres</th>
-              <th className="px-6 py-4 text-right text-[11px] font-semibold text-white/40 uppercase tracking-wider">Volumen Ventas</th>
-              <th className="px-6 py-4 text-center text-[11px] font-semibold text-white/40 uppercase tracking-wider">Acción</th>
+            <tr className="border-b border-[#2d2255] text-slate-400 uppercase text-[10px] tracking-wider">
+              <th className="pb-3 pl-2 font-semibold">RANK</th>
+              <th className="pb-3 font-semibold">TIER</th>
+              <th className="pb-3 font-semibold">ASESOR COMERCIAL & AVATAR</th>
+              <th className="pb-3 font-semibold">DISCORD TAG</th>
+              <th className="pb-3 font-semibold">CIERRES</th>
+              <th className="pb-3 font-semibold">VOLUMEN VENTAS</th>
+              <th className="pb-3 pr-2 text-right font-semibold">ACCIÓN</th>
             </tr>
           </thead>
-          <tbody>
-            {tableData.map((user, idx) => (
-              <motion.tr
-                key={user.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                whileHover={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.03)' }}
-                className="border-b border-white/[0.03] last:border-b-0 cursor-default transition-colors"
-              >
-                {/* RANK */}
-                <td className="px-6 py-4">
-                  <span className="text-sm font-bold text-dtodo-purple">
-                    #{String(user.rank).padStart(2, '0')}
-                  </span>
-                </td>
+          <tbody className="divide-y divide-[#2d2255]/40">
+            {users.map((u, idx) => {
+              const tier = getTier(u.total_sales);
+              const rankFormatted = `#${String(u.rank || idx + 1).padStart(2, '0')}`;
+              const isTop3 = (u.rank || idx + 1) <= 3;
 
-                {/* ASESOR & AVATAR */}
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-dtodo-purple/30 bg-white/10 flex-shrink-0">
-                      <img
-                        src={user.character_avatar_url || user.user_avatar_url}
-                        alt={user.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
+              return (
+                <motion.tr
+                  key={u.id}
+                  layout
+                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+                  className="group transition-colors cursor-pointer"
+                  onClick={() => onSelectUser(u)}
+                >
+                  {/* RANK */}
+                  <td className="py-3.5 pl-2">
+                    <span
+                      className={`font-mono font-bold text-xs ${
+                        isTop3
+                          ? 'text-amber-400 font-extrabold'
+                          : 'text-purple-400'
+                      }`}
+                    >
+                      {rankFormatted}
+                    </span>
+                  </td>
+
+                  {/* TIER BADGE */}
+                  <td className="py-3.5">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${tier.badgeBg} ${tier.border} ${tier.text}`}
+                    >
+                      <span>{tier.icon}</span>
+                      <span>{tier.name}</span>
+                    </span>
+                  </td>
+
+                  {/* ASESOR COMERCIAL & AVATAR */}
+                  <td className="py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-9 h-9 rounded-full overflow-hidden border border-purple-500/40 bg-black/50 p-0.5 shrink-0 group-hover:border-purple-400 transition-colors">
+                        <img
+                          src={u.character_avatar_url || '/characters/01_sheep_alex/avatar.png'}
+                          alt={u.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5">
+                          {u.name}
+                          <span className="text-xs">{u.country?.split(' ')[0]}</span>
+                        </div>
+                        <div className="text-[10px] text-purple-300 flex items-center gap-1">
+                          <span>⚔️</span>
+                          <span>{u.custom_character_name || u.character_name || 'Black Sheep'}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white/90">{user.name}</p>
-                      <p className="text-xs text-white/40">{user.country || ''}</p>
+                  </td>
+
+                  {/* DISCORD TAG */}
+                  <td className="py-3.5 font-mono text-slate-300 text-xs">
+                    {u.discord_tag}
+                  </td>
+
+                  {/* CIERRES */}
+                  <td className="py-3.5 text-slate-300 font-medium">
+                    {u.sales_count} ventas
+                  </td>
+
+                  {/* VOLUMEN VENTAS */}
+                  <td className="py-3.5 font-mono font-bold text-emerald-400 text-sm tracking-tight">
+                    {formatCurrency(u.total_sales)}
+                  </td>
+
+                  {/* ACCIÓN */}
+                  <td className="py-3.5 pr-2 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => onSelectUser(u)}
+                        className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                        title="Ver Estadísticas"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => onOpenCharacterModal(u)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#1a1435] border border-[#2d2255] text-purple-300 hover:text-white hover:border-purple-400 hover:bg-purple-900/30 transition-all flex items-center gap-1 shadow-sm"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Avatar
+                      </button>
                     </div>
-                  </div>
-                </td>
-
-                {/* DISCORD TAG */}
-                <td className="px-6 py-4">
-                  <span className="text-sm text-dtodo-purple">{user.discord_tag}</span>
-                </td>
-
-                {/* CIERRES */}
-                <td className="px-6 py-4 text-center">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <Gem className="w-3.5 h-3.5 text-neon-green" />
-                    <span className="text-sm text-white/70">{user.sales_count} ventas</span>
-                  </div>
-                </td>
-
-                {/* VOLUMEN */}
-                <td className="px-6 py-4 text-right">
-                  <span className="text-sm font-bold text-neon-green text-glow-green">
-                    {formatMoney(user.total_sales)}
-                  </span>
-                </td>
-
-                {/* ACCIÓN */}
-                <td className="px-6 py-4 text-center">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onOpenCharacterModal(user)}
-                    className="px-4 py-1.5 text-xs font-medium rounded-lg border border-white/10 
-                               text-white/60 hover:text-white hover:border-dtodo-purple/40 hover:bg-dtodo-purple/10
-                               transition-all duration-200"
-                  >
-                    Avatar
-                  </motion.button>
-                </td>
-              </motion.tr>
-            ))}
+                  </td>
+                </motion.tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
