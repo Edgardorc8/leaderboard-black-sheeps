@@ -16,6 +16,7 @@ import AdminUsersModal from './components/AdminUsersModal';
 import UserStatsModal from './components/UserStatsModal';
 import LoginRegisterModal from './components/LoginRegisterModal';
 import DiscordSimulator from './components/DiscordSimulator';
+import ReportsView from './components/ReportsView';
 
 export default function App() {
   // ---- Estado Principal ----
@@ -88,24 +89,19 @@ export default function App() {
         if (!matchesName && !matchesTag) return false;
       }
 
-      // Filtro de Tier
+      // Filtro de Tier Dinámico por Posición Relativa
+      // Top 3 -> Tier S | 4-5 -> Tier A | 6-8 -> Tier B | 9-10 -> Tier C
       if (tierFilter !== 'ALL') {
-        const sales =
-          timePeriod === 'daily'
-            ? u.daily_sales || 0
-            : timePeriod === 'weekly'
-            ? u.weekly_sales || 0
-            : u.total_sales || 0;
-
-        if (tierFilter === 'S' && sales < 100000) return false;
-        if (tierFilter === 'A' && (sales < 70000 || sales >= 100000)) return false;
-        if (tierFilter === 'B' && (sales < 40000 || sales >= 70000)) return false;
-        if (tierFilter === 'C' && sales >= 40000) return false;
+        const userRank = u.rank;
+        if (tierFilter === 'S' && userRank > 3) return false;
+        if (tierFilter === 'A' && (userRank < 4 || userRank > 5)) return false;
+        if (tierFilter === 'B' && (userRank < 6 || userRank > 8)) return false;
+        if (tierFilter === 'C' && userRank < 9) return false;
       }
 
       return true;
     });
-  }, [sortedUsers, searchQuery, tierFilter, timePeriod]);
+  }, [sortedUsers, searchQuery, tierFilter]);
 
   // ---- Métricas Grupales del Equipo ----
   const teamMetrics = useMemo(() => {
@@ -315,7 +311,7 @@ export default function App() {
           </section>
 
           {/* Vistas Condicionales */}
-          {activeView === 'leaderboard' ? (
+          {activeView === 'leaderboard' && (
             <>
               {/* Podio Top 3 */}
               <Podium top3={top3} onSelectUser={handleOpenStats} />
@@ -336,8 +332,17 @@ export default function App() {
                 />
               </div>
             </>
-          ) : (
-            /* Vista del Simulador de Discord */
+          )}
+
+          {activeView === 'reports' && (
+            <ReportsView
+              users={sortedUsers}
+              timePeriod={timePeriod}
+              onPeriodChange={setTimePeriod}
+            />
+          )}
+
+          {activeView === 'simulator' && (
             <DiscordSimulator
               users={usersWithCharacters}
               onSimulateSale={handleSimulateSale}

@@ -2,7 +2,7 @@
 // LeaderboardTable.jsx — Tabla de Clasificación General del Equipo
 // ============================================================
 import { motion } from 'framer-motion';
-import { formatCurrency, getTier } from '../lib/tiers';
+import { formatCurrency, getTierByRank } from '../lib/tiers';
 import { Eye, Sparkles } from 'lucide-react';
 
 export default function LeaderboardTable({
@@ -42,9 +42,10 @@ export default function LeaderboardTable({
           </thead>
           <tbody className="divide-y divide-[#2d2255]/40">
             {users.map((u, idx) => {
-              const tier = getTier(u.total_sales);
-              const rankFormatted = `#${String(u.rank || idx + 1).padStart(2, '0')}`;
-              const isTop3 = (u.rank || idx + 1) <= 3;
+              const currentRank = u.rank || idx + 1;
+              const tier = getTierByRank(currentRank);
+              const rankFormatted = `#${String(currentRank).padStart(2, '0')}`;
+              const isTop3 = currentRank <= 3;
 
               return (
                 <motion.tr

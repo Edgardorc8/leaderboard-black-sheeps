@@ -3,7 +3,7 @@
 // (Oro, Plata, Bronce) y Personajes en Fullbody
 // ============================================================
 import { motion } from 'framer-motion';
-import { formatCurrency, getTier } from '../lib/tiers';
+import { formatCurrency, getTierByRank } from '../lib/tiers';
 
 export default function Podium({ top3, onSelectUser }) {
   if (!top3 || top3.length === 0) return null;
@@ -59,7 +59,7 @@ export default function Podium({ top3, onSelectUser }) {
             <span>🏆</span> Podio de Honor · Top 3 Ventas
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Asesores con personajes de cuerpo completo sosteniendo sus trofeos oficiales
+            Asesores con personajes de cuerpo completo sosteniendo sus trofeos oficiales (Tier S)
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function Podium({ top3, onSelectUser }) {
           const user = step.data;
           if (!user) return <div key={step.rank} className={step.order} />;
 
-          const tier = getTier(user.total_sales);
+          const tier = getTierByRank(step.rank);
 
           return (
             <motion.div

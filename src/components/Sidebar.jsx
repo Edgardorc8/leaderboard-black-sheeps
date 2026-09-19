@@ -1,7 +1,7 @@
 // ============================================================
 // Sidebar.jsx — Barra Lateral de Navegación Oficial
 // ============================================================
-import { Trophy, Sparkles, Zap, Shield, HelpCircle } from 'lucide-react';
+import { Trophy, Sparkles, BarChart3, Shield, HelpCircle, FileText } from 'lucide-react';
 
 export default function Sidebar({
   activeView,
@@ -24,10 +24,10 @@ export default function Sidebar({
       action: onOpenCharacterModal,
     },
     {
-      id: 'simulator',
-      label: 'Simular Discord',
-      icon: Zap,
-      action: () => onNavigate('simulator'),
+      id: 'reports',
+      label: 'Reportes & Estadísticas',
+      icon: BarChart3,
+      action: () => onNavigate('reports'),
     },
   ];
 
@@ -45,16 +45,16 @@ export default function Sidebar({
   return (
     <aside className="w-64 h-screen sticky top-0 flex flex-col justify-between p-5 bg-[#090713] border-r border-[#2d2255]/60 z-40 select-none">
       <div>
-        {/* Logo DTodoSales ENTERPRISE HUB idéntico a capturas */}
+        {/* Logo Black Sheeps ENTERPRISE HUB */}
         <div className="flex items-center gap-3 px-2 py-3 mb-8">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#e94560] to-[#a855f7] p-0.5 shadow-[0_0_15px_rgba(233,69,96,0.4)] flex items-center justify-center">
             <div className="w-full h-full bg-[#120e24] rounded-[10px] flex items-center justify-center text-lg">
-              💼
+              🐑
             </div>
           </div>
           <div>
             <h1 className="text-sm font-black text-white tracking-wide leading-tight">
-              DTodoSales
+              Black Sheeps
             </h1>
             <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">
               Enterprise Hub

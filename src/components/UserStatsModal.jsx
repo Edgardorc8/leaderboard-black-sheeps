@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, Award, Calendar, DollarSign, MessageSquare, ShieldCheck } from 'lucide-react';
-import { getTier, formatCurrency } from '../lib/tiers';
+import { getTierByRank, formatCurrency } from '../lib/tiers';
 
 export default function UserStatsModal({ user, character, isOpen, onClose }) {
   const [period, setPeriod] = useState('monthly');
@@ -18,7 +18,7 @@ export default function UserStatsModal({ user, character, isOpen, onClose }) {
       ? user.weekly_sales || 0
       : user.total_sales || 0;
 
-  const tier = getTier(currentSales);
+  const tier = getTierByRank(user.rank || 1);
   const avgTicket = user.sales_count > 0 ? Math.round(user.total_sales / user.sales_count) : 0;
 
   return (
