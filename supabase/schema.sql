@@ -156,15 +156,15 @@ VALUES
   ('c0000000-0000-0000-0000-000000000010', '10_sheep_lucas', 'Lucas (The Titan Vanguard)', 'Tanque / Escudo Obsidiana', '/characters/10_sheep_lucas/avatar.png', '/characters/10_sheep_lucas/card.png', '/characters/10_sheep_lucas/fullbody.png')
 ON CONFLICT (id) DO NOTHING;
 
--- ========== SEED DATA: Super Admin (Edgardo) y Equipo ==========
+-- ========== SEED DATA: Super Admin (Edgardo) y Asesores Iniciales ==========
 INSERT INTO users (id, email, name, discord_id, discord_tag, country, role, character_id, custom_character_name, battle_cry, total_sales, sales_count)
 VALUES
-  ('u0000000-0000-0000-0000-000000000001', 'edgardorc8@gmail.com', 'Edgardo Alfonso Rangel', '100000000000000001', '@edgardorc8', '🇻🇪 Venezuela', 'super_admin', 'c0000000-0000-0000-0000-000000000001', 'The Golden Closer', '¡Trato cerrado, la manada no perdona!', 124500.00, 68),
-  ('u0000000-0000-0000-0000-000000000002', 'ana@dtodosales.com', 'Ana Gómez', '100000000000000002', '@ana_sales', '🇦🇷 Argentina', 'admin', 'c0000000-0000-0000-0000-000000000002', 'The Mystic Dealmaker', '¡La estrategia mística nunca falla!', 98200.00, 54),
-  ('u0000000-0000-0000-0000-000000000003', 'diego@dtodosales.com', 'Diego Ruiz', '100000000000000003', '@diego_vip', '🇲🇽 México', 'sales_agent', 'c0000000-0000-0000-0000-000000000003', 'The Cyber Hunter', '¡Objetivo localizado y cerrado con éxito!', 76400.00, 42)
+  ('b0000000-0000-0000-0000-000000000001', 'edgardorc8@gmail.com', 'Edgardo Alfonso Rangel', '100000000000000001', '@edgardorc8', '🇻🇪 Venezuela', 'super_admin', 'c0000000-0000-0000-0000-000000000001', 'The Golden Closer', '¡Trato cerrado, la manada no perdona!', 124500.00, 68),
+  ('b0000000-0000-0000-0000-000000000002', 'ana@dtodosales.com', 'Ana Gómez', '100000000000000002', '@ana_sales', '🇦🇷 Argentina', 'admin', 'c0000000-0000-0000-0000-000000000002', 'The Mystic Dealmaker', '¡La estrategia mística nunca falla!', 98200.00, 54),
+  ('b0000000-0000-0000-0000-000000000003', 'diego@dtodosales.com', 'Diego Ruiz', '100000000000000003', '@diego_vip', '🇲🇽 México', 'sales_agent', 'c0000000-0000-0000-0000-000000000003', 'The Cyber Hunter', '¡Objetivo localizado y cerrado con éxito!', 76400.00, 42)
 ON CONFLICT (id) DO NOTHING;
 
 -- Marcar asignados
-UPDATE characters SET is_assigned = TRUE, assigned_to_user_id = 'u0000000-0000-0000-0000-000000000001' WHERE id = 'c0000000-0000-0000-0000-000000000001';
-UPDATE characters SET is_assigned = TRUE, assigned_to_user_id = 'u0000000-0000-0000-0000-000000000002' WHERE id = 'c0000000-0000-0000-0000-000000000002';
-UPDATE characters SET is_assigned = TRUE, assigned_to_user_id = 'u0000000-0000-0000-0000-000000000003' WHERE id = 'c0000000-0000-0000-0000-000000000003';
+UPDATE characters SET is_assigned = TRUE, assigned_to_user_id = 'b0000000-0000-0000-0000-000000000001' WHERE id = 'c0000000-0000-0000-0000-000000000001';
+UPDATE characters SET is_assigned = TRUE, assigned_to_user_id = 'b0000000-0000-0000-0000-000000000002' WHERE id = 'c0000000-0000-0000-0000-000000000002';
+UPDATE characters SET is_assigned = TRUE, assigned_to_user_id = 'b0000000-0000-0000-0000-000000000003' WHERE id = 'c0000000-0000-0000-0000-000000000003';
