@@ -1,6 +1,5 @@
 // ============================================================
-// bot.js — Bot de Discord para DTodoSales Enterprise Hub
-// Escucha /venta e inserta ventas en Supabase
+// bot.js — Bot de Discord Oficial (Leaderboard Black Sheeps)
 // ============================================================
 require('dotenv').config({ path: '../.env' });
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
@@ -21,7 +20,8 @@ const client = new Client({
 });
 
 function formatMoney(amount) {
-  return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0 });
+  const rounded = Math.round(amount);
+  return '$' + rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' USD';
 }
 
 // ---- Ready ----
@@ -37,13 +37,12 @@ client.on('interactionCreate', async (interaction) => {
 
   const monto = interaction.options.getNumber('monto');
   const discordId = interaction.user.id;
-  const discordTag = interaction.user.tag;
 
   try {
-    // 1. Buscar usuario en Supabase por discord_id
+    // 1. Buscar usuario en Supabase con su personaje
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('*')
+      .select('*, characters(*)')
       .eq('discord_id', discordId)
       .single();
 
@@ -65,11 +64,14 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // 3. Actualizar totales del usuario
+    const newTotal = Number(user.total_sales) + monto;
+    const newCount = (user.sales_count || 0) + 1;
+
     const { error: updateError } = await supabase
       .from('users')
       .update({
-        total_sales: user.total_sales + monto,
-        sales_count: user.sales_count + 1,
+        total_sales: newTotal,
+        sales_count: newCount,
       })
       .eq('id', user.id);
 
@@ -79,41 +81,43 @@ client.on('interactionCreate', async (interaction) => {
 
     // 4. Responder efímeramente al vendedor
     await interaction.reply({
-      content: `✅ Venta de **${formatMoney(monto)} USD** registrada exitosamente.\nTu nuevo total: **${formatMoney(user.total_sales + monto)} USD** (${user.sales_count + 1} cierres)`,
+      content: `✅ ¡Cierre de **${formatMoney(monto)}** registrado exitosamente!\nTu nuevo volumen acumulado: **${formatMoney(newTotal)}** (${newCount} cierres).`,
       ephemeral: true,
     });
 
-    // 5. Enviar embed público celebrando el cierre
+    // 5. Enviar embed público celebrando el cierre con su oveja y grito de batalla
+    const charName = user.custom_character_name || user.characters?.name || 'Black Sheep Warrior';
+    const battleCry = user.battle_cry ? `«${user.battle_cry}»` : '¡La manada de Black Sheeps sigue conquistando metas!';
+
     const embed = new EmbedBuilder()
-      .setColor(0xa855f7) // Purple
-      .setTitle('🎉 ¡NUEVO CIERRE DE VENTA!')
-      .setDescription(`**${user.name}** acaba de cerrar una venta de **${formatMoney(monto)} USD**`)
+      .setColor(0xa855f7) // Púrpura neón
+      .setTitle('🔥 ¡NUEVO CIERRE DE VENTA — BLACK SHEEPS!')
+      .setDescription(`**${user.name}** (\`⚔️ ${charName}\`) acaba de cerrar un contrato de **${formatMoney(monto)}**!\n\n*${battleCry}*`)
       .addFields(
-        { name: '💰 Monto', value: `${formatMoney(monto)} USD`, inline: true },
-        { name: '📊 Total Acumulado', value: `${formatMoney(user.total_sales + monto)} USD`, inline: true },
-        { name: '🔥 Cierres Totales', value: `${user.sales_count + 1}`, inline: true }
+        { name: '💰 Monto del Cierre', value: formatMoney(monto), inline: true },
+        { name: '📊 Volumen Acumulado', value: formatMoney(newTotal), inline: true },
+        { name: '🎯 Cierres Totales', value: `${newCount} ventas`, inline: true }
       )
-      .setThumbnail(user.avatar_url || '')
-      .setFooter({ text: 'DTodoSales Enterprise Hub — Leaderboard en Vivo' })
+      .setFooter({ text: 'DTodoSales ENTERPRISE HUB · Leaderboard en Vivo' })
       .setTimestamp();
 
-    await interaction.channel.send({ embeds: [embed] });
-
-  } catch (error) {
-    console.error('Error en /venta:', error);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({
-        content: `❌ Error al procesar la venta: ${error.message}`,
-        ephemeral: true,
-      });
-    } else {
-      await interaction.reply({
-        content: `❌ Error al procesar la venta: ${error.message}`,
-        ephemeral: true,
-      });
+    if (user.characters?.avatar_url) {
+      embed.setThumbnail(user.characters.avatar_url);
     }
+
+    await interaction.channel.send({ embeds: [embed] });
+  } catch (err) {
+    console.error('Error procesando venta:', err);
+    await interaction.reply({
+      content: '⚠️ Ocurrió un error al registrar la venta. Intenta nuevamente.',
+      ephemeral: true,
+    });
   }
 });
 
-// ---- Login ----
-client.login(process.env.DISCORD_TOKEN);
+// ---- Iniciar Sesión ----
+if (process.env.DISCORD_TOKEN) {
+  client.login(process.env.DISCORD_TOKEN);
+} else {
+  console.warn('⚠️ DISCORD_TOKEN no configurado en .env. El bot no iniciará hasta configurar las credenciales.');
+}
