@@ -43,7 +43,7 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="w-64 h-screen sticky top-0 flex flex-col justify-between p-5 bg-[#090713] border-r border-[#2d2255]/60 z-40 select-none">
+    <aside className="hidden md:flex w-64 h-screen sticky top-0 flex-col justify-between p-5 bg-[#090713] border-r border-[#2d2255]/60 z-40 select-none">
       <div>
         {/* Logo Black Sheeps ENTERPRISE HUB */}
         <div className="flex items-center gap-3 px-2 py-3 mb-8">

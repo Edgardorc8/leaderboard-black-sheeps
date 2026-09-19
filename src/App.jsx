@@ -7,6 +7,7 @@ import { formatCurrency } from './lib/tiers';
 
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import MobileMenu from './components/MobileMenu';
 import TimeFilter from './components/TimeFilter';
 import TierFilter from './components/TierFilter';
 import Podium from './components/Podium';
@@ -36,6 +37,7 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [statsSelectedUser, setStatsSelectedUser] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // ---- Combinar usuarios con datos de sus personajes ----
   const usersWithCharacters = useMemo(() => {
@@ -250,6 +252,14 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-[#090713] text-white selection:bg-purple-600 selection:text-white font-sans">
+      {/* Mobile Navigation Drawer */}
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        activeSection={activeView}
+        onNavigate={(view) => setActiveView(view)}
+      />
+
       {/* Sidebar fijo a la izquierda */}
       <Sidebar
         activeView={activeView}
@@ -273,9 +283,10 @@ export default function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onOpenStats={handleOpenStats}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         />
 
-        <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-8">
+        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto space-y-6 md:space-y-8">
           {/* Barra Hero: Métricas Grupales del Equipo + Selector Temporal */}
           <section className="p-6 rounded-2xl bg-gradient-to-r from-[#141026] via-[#120e24] to-[#18132f] border border-[#2d2255] shadow-[0_0_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 w-full md:w-auto">

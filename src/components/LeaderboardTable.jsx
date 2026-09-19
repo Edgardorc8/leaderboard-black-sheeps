@@ -1,5 +1,6 @@
 // ============================================================
 // LeaderboardTable.jsx — Tabla de Clasificación General del Equipo
+// Responsive: tarjetas apiladas en móvil, tabla en desktop
 // ============================================================
 import { motion } from 'framer-motion';
 import { formatCurrency, getTierByRank } from '../lib/tiers';
@@ -11,7 +12,7 @@ export default function LeaderboardTable({
   onSelectUser,
 }) {
   return (
-    <section className="bg-[#120e24] border border-[#2d2255] rounded-2xl p-6 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+    <section className="bg-[#120e24] border border-[#2d2255] rounded-2xl p-4 md:p-6 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
       {/* Header de la tabla */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
@@ -22,18 +23,86 @@ export default function LeaderboardTable({
         </div>
 
         <span className="text-xs text-slate-400 font-semibold px-2.5 py-1 rounded-full bg-black/40 border border-[#2d2255]">
-          Mostrando {users.length} asesores
+          {users.length} asesores
         </span>
       </div>
 
-      {/* Tabla con scroll horizontal en móviles */}
-      <div className="overflow-x-auto">
+      {/* ── Vista Móvil: Tarjetas apiladas ── */}
+      <div className="md:hidden space-y-3">
+        {users.map((u, idx) => {
+          const currentRank = u.rank || idx + 1;
+          const tier = getTierByRank(currentRank);
+          const isTop3 = currentRank <= 3;
+
+          return (
+            <motion.div
+              key={u.id}
+              layout
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.03 }}
+              onClick={() => onSelectUser(u)}
+              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                isTop3
+                  ? 'bg-amber-500/5 border-amber-500/30'
+                  : 'bg-white/[0.02] border-[#2d2255] hover:border-purple-500/30'
+              }`}
+            >
+              {/* Rank */}
+              <span className={`font-mono font-black text-sm w-8 text-center flex-shrink-0 ${
+                isTop3 ? 'text-amber-400' : 'text-purple-400'
+              }`}>
+                #{currentRank}
+              </span>
+
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-purple-500/40 bg-black/50 flex-shrink-0">
+                <img
+                  src={u.character_avatar_url || '/characters/01_sheep_alex/avatar.png'}
+                  alt={u.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white text-sm truncate">{u.name}</span>
+                  <span className="text-xs">{u.country?.split(' ')[0]}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold border ${tier.badgeBg} ${tier.border} ${tier.text}`}>
+                    {tier.icon} {tier.name}
+                  </span>
+                  <span className="text-[10px] text-slate-400">{u.sales_count} ventas</span>
+                </div>
+              </div>
+
+              {/* Volumen */}
+              <div className="text-right flex-shrink-0">
+                <div className="font-mono font-bold text-emerald-400 text-sm">
+                  {formatCurrency(u.total_sales)}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onOpenCharacterModal(u); }}
+                  className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  ✨ Avatar
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* ── Vista Desktop: Tabla tradicional ── */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-[#2d2255] text-slate-400 uppercase text-[10px] tracking-wider">
               <th className="pb-3 pl-2 font-semibold">RANK</th>
               <th className="pb-3 font-semibold">TIER</th>
-              <th className="pb-3 font-semibold">ASESOR COMERCIAL & AVATAR</th>
+              <th className="pb-3 font-semibold">ASESOR COMERCIAL &amp; AVATAR</th>
               <th className="pb-3 font-semibold">DISCORD TAG</th>
               <th className="pb-3 font-semibold">CIERRES</th>
               <th className="pb-3 font-semibold">VOLUMEN VENTAS</th>

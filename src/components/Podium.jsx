@@ -58,7 +58,7 @@ export default function Podium({ top3, onSelectUser }) {
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <span>🏆</span> Podio de Honor · Top 3 Ventas
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5 hidden md:block">
             Asesores con personajes de cuerpo completo sosteniendo sus trofeos oficiales (Tier S)
           </p>
         </div>
@@ -69,8 +69,8 @@ export default function Podium({ top3, onSelectUser }) {
         </div>
       </div>
 
-      {/* Grid del podio */}
-      <div className="grid grid-cols-3 gap-6 items-end">
+      {/* Grid del podio — scroll horizontal en móvil, grid 3 col en desktop */}
+      <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-6 items-end overflow-x-auto pb-2 md:pb-0 snap-x snap-mandatory md:snap-none scrollbar-hide">
         {podiumSteps.map((step) => {
           const user = step.data;
           if (!user) return <div key={step.rank} className={step.order} />;
@@ -85,7 +85,7 @@ export default function Podium({ top3, onSelectUser }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               onClick={() => onSelectUser(user)}
-              className={`relative ${step.order} ${step.cardHeight} cursor-pointer group flex flex-col justify-between p-6 rounded-2xl bg-[#141026] border ${step.borderColor} ${step.glow} backdrop-blur-xl transition-all duration-300 hover:scale-[1.02]`}
+              className={`relative ${step.order} flex-shrink-0 w-[80vw] md:w-auto ${step.cardHeight} cursor-pointer group flex flex-col justify-between p-4 md:p-6 rounded-2xl bg-[#141026] border ${step.borderColor} ${step.glow} backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] snap-center`}
             >
               {/* Badge de posición superior */}
               <div className="flex items-center justify-between z-10">

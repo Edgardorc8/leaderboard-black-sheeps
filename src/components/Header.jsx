@@ -2,7 +2,7 @@
 // Header.jsx — Barra Superior con Búsqueda, Usuario Activo y Selector
 // ============================================================
 import { useState } from 'react';
-import { Search, Bell, ChevronDown, UserCheck, Shield } from 'lucide-react';
+import { Search, Bell, ChevronDown, UserCheck, Shield, Menu } from 'lucide-react';
 
 export default function Header({
   currentUser,
@@ -12,13 +12,23 @@ export default function Header({
   searchQuery,
   onSearchChange,
   onOpenStats,
+  onOpenMobileMenu,
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-8 py-4 bg-[#090713]/80 backdrop-blur-xl border-b border-[#2d2255]/50">
-      {/* Buscador idéntico a captura */}
-      <div className="relative w-96">
+    <header className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-3 md:py-4 bg-[#090713]/80 backdrop-blur-xl border-b border-[#2d2255]/50 gap-3">
+      {/* Hamburger — solo móvil */}
+      <button
+        onClick={onOpenMobileMenu}
+        className="md:hidden p-2 rounded-xl bg-[#141026] border border-[#2d2255] text-slate-400 hover:text-white hover:border-purple-500/50 transition-colors flex-shrink-0"
+        aria-label="Abrir menú"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Buscador — oculto en móvil */}
+      <div className="relative hidden md:flex w-96">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
@@ -28,6 +38,9 @@ export default function Header({
           className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#141026] border border-[#2d2255] text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-400/80 focus:shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all"
         />
       </div>
+
+      {/* Spacer en móvil para empujar acciones a la derecha */}
+      <div className="flex-1 md:hidden" />
 
       {/* Acciones Derecha */}
       <div className="flex items-center gap-4">
